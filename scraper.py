@@ -4,6 +4,7 @@ DuckDuckGo URL Scraper - Extracts first search result URL for each query.
 """
 
 import csv
+import os
 import time
 import urllib.parse
 from selenium import webdriver
@@ -16,6 +17,7 @@ from selenium.common.exceptions import TimeoutException, NoSuchElementException
 INPUT_FILE = "/app/inputs.txt"
 OUTPUT_FILE = "/app/output.csv"
 DELAY_BETWEEN_REQUESTS = 2  # seconds
+LIMIT = int(os.environ.get("LIMIT", 0))  # 0 = no limit
 
 
 def create_driver():
@@ -80,7 +82,11 @@ def main():
 
     # Read input queries
     queries = read_inputs(INPUT_FILE)
-    print(f"Loaded {len(queries)} queries from {INPUT_FILE}")
+    if LIMIT > 0:
+        queries = queries[:LIMIT]
+        print(f"Limited to {len(queries)} queries (LIMIT={LIMIT})")
+    else:
+        print(f"Loaded {len(queries)} queries from {INPUT_FILE}")
 
     # Create driver
     driver = create_driver()

@@ -23,6 +23,24 @@ docker build -t rt_url_selenium .
 docker run --rm -v $(pwd):/app rt_url_selenium
 ```
 
+### Running in Background (Detached Mode)
+
+For long-running jobs or SSH sessions that may disconnect:
+
+```bash
+# Run detached
+docker run -d --name rt_scraper -v $(pwd):/app rt_url_selenium
+
+# Check progress (follow live)
+docker logs -f rt_scraper
+
+# Check progress (one-time snapshot)
+docker logs rt_scraper
+
+# When done, remove the container
+docker rm rt_scraper
+```
+
 ## Input Format
 
 Create an `inputs.txt` file with one search query per line:

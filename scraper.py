@@ -96,13 +96,13 @@ def main():
 
     try:
         for i, query in enumerate(queries, 1):
-            print(f"[{i}/{len(queries)}] Searching: {query}")
+            print(f"[{i}/{len(queries)}] Searching: {query}", flush=True)
 
             url = search_duckduckgo(driver, query)
             results.append((query, url))
 
             if url:
-                print(f"  Found: {url}")
+                print(f"  Found: {url}", flush=True)
 
             # Delay between requests to avoid rate limiting
             if i < len(queries):

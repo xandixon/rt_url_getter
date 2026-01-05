@@ -77,32 +77,78 @@ def read_inputs(filepath):
     return queries
 
 
+def load_completed_queries(filepath):
+    """Load already-completed queries from existing output file."""
+    completed = set()
+    if not os.path.exists(filepath):
+        return completed
+
+    try:
+        with open(filepath, "r", encoding="utf-8") as f:
+            reader = csv.reader(f)
+            next(reader, None)  # Skip header
+            for row in reader:
+                if row:
+                    completed.add(row[0])
+    except Exception as e:
+        print(f"Warning: Could not read existing output file: {e}")
+
+    return completed
+
+
 def main():
     print("Starting DuckDuckGo URL scraper...")
 
     # Read input queries
-    queries = read_inputs(INPUT_FILE)
+    all_queries = read_inputs(INPUT_FILE)
     if LIMIT > 0:
-        queries = queries[:LIMIT]
-        print(f"Limited to {len(queries)} queries (LIMIT={LIMIT})")
+        all_queries = all_queries[:LIMIT]
+        print(f"Limited to {len(all_queries)} queries (LIMIT={LIMIT})")
     else:
-        print(f"Loaded {len(queries)} queries from {INPUT_FILE}")
+        print(f"Loaded {len(all_queries)} queries from {INPUT_FILE}")
+
+    # Check for existing progress and resume
+    completed_queries = load_completed_queries(OUTPUT_FILE)
+    if completed_queries:
+        print(f"Found {len(completed_queries)} already completed queries, resuming...")
+
+    # Filter out already-completed queries
+    queries = [q for q in all_queries if q not in completed_queries]
+    if not queries:
+        print("All queries already completed!")
+        return
+
+    print(f"Processing {len(queries)} remaining queries...")
+
+    # Ensure output file exists with header
+    if not os.path.exists(OUTPUT_FILE) or os.path.getsize(OUTPUT_FILE) == 0:
+        with open(OUTPUT_FILE, "w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow(["query", "url"])
 
     # Create driver
     driver = create_driver()
     print("Chrome driver initialized")
 
-    results = []
+    successful = 0
+    processed = 0
 
     try:
         for i, query in enumerate(queries, 1):
-            print(f"[{i}/{len(queries)}] Searching: {query}", flush=True)
+            total_progress = len(completed_queries) + i
+            print(f"[{total_progress}/{len(all_queries)}] Searching: {query}", flush=True)
 
             url = search_duckduckgo(driver, query)
-            results.append((query, url))
+            processed += 1
 
             if url:
                 print(f"  Found: {url}", flush=True)
+                successful += 1
+
+            # Write result immediately to CSV (append mode)
+            with open(OUTPUT_FILE, "a", newline="", encoding="utf-8") as f:
+                writer = csv.writer(f)
+                writer.writerow([query, url])
 
             # Delay between requests to avoid rate limiting
             if i < len(queries):
@@ -112,14 +158,8 @@ def main():
         driver.quit()
         print("Chrome driver closed")
 
-    # Write results to CSV
-    with open(OUTPUT_FILE, "w", newline="", encoding="utf-8") as f:
-        writer = csv.writer(f)
-        writer.writerow(["query", "url"])
-        writer.writerows(results)
-
-    print(f"Results written to {OUTPUT_FILE}")
-    print(f"Successfully scraped {sum(1 for _, url in results if url)}/{len(results)} URLs")
+    print(f"Session complete: scraped {successful}/{processed} URLs successfully")
+    print(f"Total progress: {len(completed_queries) + processed}/{len(all_queries)} queries completed")
 
 
 if __name__ == "__main__":

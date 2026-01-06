@@ -12,7 +12,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, NoSuchElementException
+from selenium.common.exceptions import TimeoutException, NoSuchElementException, WebDriverException
 
 INPUT_FILE = "/app/inputs.txt"
 OUTPUT_FILE = "/app/output.csv"
@@ -31,6 +31,7 @@ def create_driver():
     options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
 
     driver = webdriver.Chrome(options=options)
+    driver.set_page_load_timeout(30)  # Timeout if page load takes > 30 seconds
     return driver
 
 
@@ -39,7 +40,11 @@ def search_duckduckgo(driver, query):
     encoded_query = urllib.parse.quote_plus(query)
     url = f"https://duckduckgo.com/?q={encoded_query}"
 
-    driver.get(url)
+    try:
+        driver.get(url)
+    except WebDriverException as e:
+        print(f"  Page load timeout for: {query}")
+        return ""
 
     try:
         # Wait for search results to load
